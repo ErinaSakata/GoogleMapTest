@@ -1,65 +1,135 @@
 package com.test02.ropose.myapplication;
 
-import android.support.v4.app.FragmentActivity;
+import android.app.Activity;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.MapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-public class MapsActivity extends FragmentActivity {
+import java.util.ArrayList;
+import java.util.HashMap;
 
-    private GoogleMap mMap; // Might be null if Google Play services APK is not available.
+public class MapsActivity extends Activity
+{
+    private GoogleMap mMap;
+    private ArrayList<MyMarker> mMyMarkersArray = new ArrayList<MyMarker>();
+    private HashMap<Marker, MyMarker> mMarkersHashMap;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState)
+    {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        setUpMapIfNeeded();
+
+        // Initialize the HashMap for Markers and MyMarker object
+        mMarkersHashMap = new HashMap<Marker, MyMarker>();
+
+        mMyMarkersArray.add(new MyMarker("Campus London", "icon1", Double.parseDouble("51.507351"), Double.parseDouble("-0.127758")));
+        mMyMarkersArray.add(new MyMarker("Campus Tel Aviv", "icon2", Double.parseDouble("32.086847"), Double.parseDouble("34.779593")));
+        mMyMarkersArray.add(new MyMarker("Campus Seoul", "icon3", Double.parseDouble("37.566535"), Double.parseDouble("126.977969")));
+        mMyMarkersArray.add(new MyMarker("Campus Madrid", "icon4", Double.parseDouble("40.416775"), Double.parseDouble("-3.70379")));
+
+        setUpMap();
+
+        plotMarkers(mMyMarkersArray);
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        setUpMapIfNeeded();
-    }
+    private void plotMarkers(ArrayList<MyMarker> markers)
+    {
+        if(markers.size() > 0)
+        {
+            for (MyMarker myMarker : markers)
+            {
 
-    /**
-     * Sets up the map if it is possible to do so (i.e., the Google Play services APK is correctly
-     * installed) and the map has not already been instantiated.. This will ensure that we only ever
-     * call {@link #setUpMap()} once when {@link #mMap} is not null.
-     * <p/>
-     * If it isn't installed {@link SupportMapFragment} (and
-     * {@link com.google.android.gms.maps.MapView MapView}) will show a prompt for the user to
-     * install/update the Google Play services APK on their device.
-     * <p/>
-     * A user can return to this FragmentActivity after following the prompt and correctly
-     * installing/updating/enabling the Google Play services. Since the FragmentActivity may not
-     * have been completely destroyed during this process (it is likely that it would only be
-     * stopped or paused), {@link #onCreate(Bundle)} may not be called again so we should call this
-     * method in {@link #onResume()} to guarantee that it will be called.
-     */
-    private void setUpMapIfNeeded() {
-        // Do a null check to confirm that we have not already instantiated the map.
-        if (mMap == null) {
-            // Try to obtain the map from the SupportMapFragment.
-            mMap = ((SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map))
-                    .getMap();
-            // Check if we were successful in obtaining the map.
-            if (mMap != null) {
-                setUpMap();
+                // Create user marker with custom icon and other options
+                MarkerOptions markerOption = new MarkerOptions().position(new LatLng(myMarker.getmLatitude(), myMarker.getmLongitude()));
+                markerOption.icon(BitmapDescriptorFactory.fromResource(R.drawable.pin));
+
+                Marker currentMarker = mMap.addMarker(markerOption);
+                mMarkersHashMap.put(currentMarker, myMarker);
+
+                mMap.setInfoWindowAdapter(new MarkerInfoWindowAdapter());
             }
         }
     }
 
-    /**
-     * This is where we can add markers or lines, add listeners or move the camera. In this case, we
-     * just add a marker near Africa.
-     * <p/>
-     * This should only be called once and when we are sure that {@link #mMap} is not null.
-     */
-    private void setUpMap() {
-        mMap.addMarker(new MarkerOptions().position(new LatLng(0, 0)).title("Marker"));
+    private int manageMarkerIcon(String markerIcon)
+    {
+        if (markerIcon.equals("icon1"))
+            return R.drawable.london;
+        else if(markerIcon.equals("icon2"))
+            return R.drawable.telaviv;
+        else if(markerIcon.equals("icon3"))
+            return R.drawable.seoul;
+        else if(markerIcon.equals("icon4"))
+            return R.drawable.madrid;
+        else
+            return R.drawable.london;
+    }
+
+    private void setUpMap()
+    {
+        // Do a null check to confirm that we have not already instantiated the map.
+        if (mMap == null)
+        {
+            // Try to obtain the map from the SupportMapFragment.
+            mMap = ((MapFragment) getFragmentManager().findFragmentById(R.id.map)).getMap();
+
+            // Check if we were successful in obtaining the map.
+
+            if (mMap != null)
+            {
+                mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener()
+                {
+                    @Override
+                    public boolean onMarkerClick(com.google.android.gms.maps.model.Marker marker)
+                    {
+                        marker.showInfoWindow();
+                        return true;
+                    }
+                });
+            }
+            else
+                Toast.makeText(getApplicationContext(), "Unable to create Maps", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public class MarkerInfoWindowAdapter implements GoogleMap.InfoWindowAdapter
+    {
+        public MarkerInfoWindowAdapter()
+        {
+        }
+
+        @Override
+        public View getInfoWindow(Marker marker)
+        {
+            return null;
+        }
+
+        @Override
+        public View getInfoContents(Marker marker)
+        {
+            View v  = getLayoutInflater().inflate(R.layout.infowindow_layout, null);
+
+            MyMarker myMarker = mMarkersHashMap.get(marker);
+
+            ImageView markerIcon = (ImageView) v.findViewById(R.id.marker_icon);
+
+            TextView markerLabel = (TextView)v.findViewById(R.id.marker_label);
+
+            markerIcon.setImageResource(manageMarkerIcon(myMarker.getmIcon()));
+
+            markerLabel.setText(myMarker.getmLabel());
+
+            return v;
+        }
     }
 }
